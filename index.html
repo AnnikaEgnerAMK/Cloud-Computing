@@ -3,9 +3,353 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Retro F1 Classifier</title>
+    <!-- Comic/Retro Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Racing+Sans+One&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --racing-red: #d32f2f;
+            --racing-yellow: #fbc02d;
+            --comic-border: 4px solid black;
+            --comic-shadow: 6px 6px 0px black;
+        }
+
+        body {
+            /* Checkered Flag Background */
+            background-color: #ffffff;
+            background-image: conic-gradient(black 90deg, white 90deg 180deg, black 180deg 270deg, white 270deg);
+            background-size: 50px 50px;
+            font-family: 'Bangers', cursive; /* Comic font */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: white;
+            border: var(--comic-border);
+            box-shadow: var(--comic-shadow);
+            border-radius: 12px; /* Slight retro curve */
+            padding: 2rem;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 {
+            font-family: 'Racing Sans One', cursive;
+            font-size: 3.5rem;
+            margin: 0 0 1rem 0;
+            color: var(--racing-red);
+            text-transform: uppercase;
+            text-shadow: 3px 3px 0px black;
+            transform: skew(-5deg); /* Speed effect */
+        }
+
+        .comic-panel {
+            border: 3px solid black;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: #f8f8f8;
+            position: relative;
+        }
+        
+        /* Drop Zone Styles */
+        .drop-zone {
+            width: 100%;
+            height: 200px;
+            border: 4px dashed black;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            background-color: #fffde7;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            background-color: var(--racing-yellow);
+            transform: scale(1.02);
+        }
+
+        .drop-zone p {
+            font-size: 1.5rem;
+            margin: 0;
+            color: #333;
+        }
+
+        /* Hidden file input */
+        #file-input {
+            display: none;
+        }
+
+        /* Image Preview */
+        #image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 1rem;
+            border: 3px solid black;
+            display: none; /* Hidden by default */
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+        }
+
+        /* Results Area */
+        #result-container {
+            margin-top: 2rem;
+            padding: 1rem;
+            display: none;
+        }
+
+        .bubble {
+            background: #fff;
+            border: 3px solid black;
+            border-radius: 20px;
+            padding: 15px;
+            position: relative;
+            display: inline-block;
+            box-shadow: 4px 4px 0px black;
+            font-size: 1.8rem;
+            line-height: 1.2;
+        }
+
+        .bubble:after {
+            /* Speech bubble tail */
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            margin-left: -10px;
+            border-width: 0 10px 20px;
+            border-style: solid;
+            border-color: black transparent;
+            display: block;
+            width: 0;
+        }
+        
+        .bubble-content {
+           background: white;
+           z-index: 2;
+           position: relative;
+        }
+
+        .team-name {
+            color: var(--racing-red);
+            font-size: 2.2rem;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .confidence {
+            font-size: 1.2rem;
+            color: #666;
+            margin-top: 10px;
+            font-family: sans-serif; /* Readable font for numbers */
+            font-weight: bold;
+        }
+
+        .loading {
+            font-size: 1.5rem;
+            color: var(--racing-yellow);
+            text-shadow: 1px 1px 0 black;
+        }
+        
+        .speed-lines {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 30px;
+            color: black;
+            z-index: 100;
+        }
+
+        .reset-btn {
+            background-color: var(--racing-red);
+            color: white;
+            border: 3px solid black;
+            padding: 10px 20px;
+            font-family: 'Bangers', cursive;
+            font-size: 1.5rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            box-shadow: 4px 4px 0px black;
+            transition: all 0.2s;
+            display: none; /* Hidden initially */
+        }
+
+        .reset-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px black;
+        }
+
+        .reset-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px black;
+        }
+
+    </style>
 </head>
 <body>
+
+<div class="container">
+    <div class="speed-lines">💨</div>
+    <h1>Pit Stop Check</h1>
+    <div id="model-status" class="loading">Warming up engines (Loading Model)...</div>
+
+    <div class="comic-panel">
+        <div id="drop-zone" class="drop-zone">
+            <p>🏁 Drop Car Photo Here! 🏁</p>
+            <span style="font-size: 1rem; font-family: sans-serif;">(or click to upload)</span>
+        </div>
+        <input type="file" id="file-input" accept="image/*">
+        <img id="image-preview" src="" alt="Car Preview">
+        <br>
+        <button id="reset-btn" class="reset-btn">🔄 New Race</button>
+    </div>
+
+    <div id="result-container">
+        <div class="bubble">
+            <div id="prediction-text" class="bubble-content">Waiting for car...</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<script type="text/javascript">
+    // --- Configuration ---
+    const URL = "https://teachablemachine.withgoogle.com/models/MCHdmzzFA/";
     
+    let model, maxPredictions;
+    const modelStatus = document.getElementById('model-status');
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const imagePreview = document.getElementById('image-preview');
+    const resultContainer = document.getElementById('result-container');
+    const predictionText = document.getElementById('prediction-text');
+    const resetBtn = document.getElementById('reset-btn');
+
+    // --- Initialization ---
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        try {
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+            modelStatus.innerHTML = "🟢 Model Ready to Race!";
+            modelStatus.style.color = "green";
+        } catch (error) {
+            modelStatus.innerHTML = "🔴 Engine Failure (Model Error)";
+            console.error(error);
+        }
+    }
+
+    // --- Event Listeners ---
+    // 1. Initialize logic
+    window.addEventListener('load', init);
+
+    // 2. Drag & Drop interactions
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // 3. File Input interaction
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    // 4. Reset Button interaction
+    resetBtn.addEventListener('click', () => {
+        // Reset View
+        imagePreview.style.display = 'none';
+        imagePreview.src = '';
+        dropZone.style.display = 'flex';
+        resetBtn.style.display = 'none';
+        resultContainer.style.display = 'none';
+        fileInput.value = ''; // Allow re-selecting same file
+    });
+
+    // --- Core Logic ---
+    function handleFile(file) {
+        // Validate File Type
+        if (!file.type.startsWith('image/')) {
+            alert('🚫 Pit Lane Violation! Please upload an image file.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Update Preview
+            imagePreview.src = e.target.result;
+            imagePreview.style.display = 'block';
+            resetBtn.style.display = 'inline-block';
+            dropZone.style.display = 'none'; // Hide drop zone to make room
+            
+            // Run Prediction when image is loaded
+            imagePreview.onload = async function() {
+                await predict(imagePreview);
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function predict(imageElement) {
+        if (!model) return;
+
+        resultContainer.style.display = 'block';
+        predictionText.innerHTML = "Thinking...";
+
+        const prediction = await model.predict(imageElement);
+        
+        // Find the best prediction
+        let highestProb = 0;
+        let bestClassName = "";
+        
+        for (let i = 0; i < maxPredictions; i++) {
+            if (prediction[i].probability > highestProb) {
+                highestProb = prediction[i].probability;
+                bestClassName = prediction[i].className;
+            }
+        }
+
+        const percentage = (highestProb * 100).toFixed(2);
+
+        // Required Outcome Format
+        predictionText.innerHTML = `
+            Your car is from the team <br>
+            <span class="team-name">${bestClassName}!</span>
+            <div class="confidence">Confidence: ${percentage}%</div>
+        `;
+    }
+
+</script>
 </body>
 </html>
